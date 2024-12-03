@@ -1,0 +1,8 @@
+[package]
+edition = "2021"
+name = "day03"
+version = "0.1.0"
+
+[dependencies]
+regex = "1.11"
+test_support = {path = "../test_support"}
