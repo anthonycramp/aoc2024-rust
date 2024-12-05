@@ -9,7 +9,37 @@ fn main() {
 
 // replace return type as required by the problem
 fn part1(input: &str) -> i32 {
-    0
+    let mut rules_and_print_orders = input.split("\n\n");
+    let rules = rules_and_print_orders
+        .next()
+        .unwrap()
+        .lines()
+        .collect::<Vec<_>>();
+    let print_orders = rules_and_print_orders
+        .next()
+        .unwrap()
+        .lines()
+        .map(|l| l.split(",").collect::<Vec<_>>())
+        .collect::<Vec<_>>();
+
+    let mut sum = 0;
+    for print_order in &print_orders {
+        let mut valid_print_order = true;
+        for i in 0..(print_order.len() - 1) {
+            for j in i..print_order.len() {
+                let broken_rule = format!("{}|{}", print_order[j], print_order[i]);
+                let rule_broken = rules.contains(&broken_rule.as_str());
+                valid_print_order &= !rule_broken;
+            }
+        }
+        if valid_print_order {
+            let mid_number = print_order[print_order.len() / 2].parse::<i32>().unwrap();
+
+            sum += mid_number;
+        }
+    }
+
+    sum
 }
 
 // replace return type as required by the problem
