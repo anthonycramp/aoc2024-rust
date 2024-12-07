@@ -38,7 +38,13 @@ fn try_equation(operators: &Vec<&Operators>, target: i64, operands: &Vec<i64>) -
         match operator {
             Operators::ADD => accumulator = Some(left_operand + right_operand),
             Operators::MULT => accumulator = Some(left_operand * right_operand),
-            _ => (),
+            Operators::CONCAT => {
+                accumulator = Some(
+                    format!("{}{}", left_operand, right_operand)
+                        .parse::<i64>()
+                        .unwrap(),
+                )
+            }
         }
     }
 
@@ -70,7 +76,17 @@ fn inspect_equation(equation: &str, operators: &Vec<Operators>) -> Option<i64> {
 
 // replace return type as required by the problem
 fn part2(input: &str) -> i64 {
-    0
+    input
+        .lines()
+        .map(|line| {
+            inspect_equation(
+                line,
+                &vec![Operators::ADD, Operators::MULT, Operators::CONCAT],
+            )
+        })
+        .filter(|res| res.is_some())
+        .map(|res| res.unwrap())
+        .sum::<i64>()
 }
 
 #[cfg(test)]
