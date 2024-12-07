@@ -1,4 +1,4 @@
-use core::num;
+use itertools::Itertools;
 
 const DAY_NUMBER: &str = "07";
 const INPUT: &str = include_str!("../../inputs/day07.txt");
@@ -8,23 +8,26 @@ fn main() {
     println!("Day {} Part 2: {:?}", DAY_NUMBER, part2(INPUT));
 }
 
+#[derive(Debug)]
+enum Operators {
+    ADD,
+    MULT,
+    CONCAT,
+}
+
 // replace return type as required by the problem
 fn part1(input: &str) -> i64 {
     input
         .lines()
-        .map(|line| inspect_equation(line, try_equation))
+        .map(|line| inspect_equation(line, &vec![Operators::ADD, Operators::MULT]))
         .filter(|res| res.is_some())
         .map(|res| res.unwrap())
         .sum::<i64>()
 }
 
-fn try_equation(operator_map: i64, target: i64, operands: &Vec<i64>) -> bool {
-    let binary_operator_string = format!("{:b}", operator_map);
-    let operator_string =
-        "0".repeat(operands.len() - 1 - binary_operator_string.len()) + &binary_operator_string;
-
+fn try_equation(operators: &Vec<&Operators>, target: i64, operands: &Vec<i64>) -> bool {
     let mut accumulator = None;
-    for (i, operator) in operator_string.chars().enumerate() {
+    for (i, operator) in operators.iter().enumerate() {
         let left_operand = if accumulator.is_none() {
             operands[i]
         } else {
@@ -33,8 +36,8 @@ fn try_equation(operator_map: i64, target: i64, operands: &Vec<i64>) -> bool {
         let right_operand = operands[i + 1];
 
         match operator {
-            '0' => accumulator = Some(left_operand + right_operand),
-            '1' => accumulator = Some(left_operand * right_operand),
+            Operators::ADD => accumulator = Some(left_operand + right_operand),
+            Operators::MULT => accumulator = Some(left_operand * right_operand),
             _ => (),
         }
     }
@@ -42,30 +45,22 @@ fn try_equation(operator_map: i64, target: i64, operands: &Vec<i64>) -> bool {
     accumulator.unwrap() == target
 }
 
-fn inspect_equation(
-    equation: &str,
-    try_equation_fn: fn(i64, i64, &Vec<i64>) -> bool,
-) -> Option<i64> {
-    println!("{}", equation);
+fn inspect_equation(equation: &str, operators: &Vec<Operators>) -> Option<i64> {
     let mut equation_parts = equation.split(": ");
     let target_output = equation_parts.next().unwrap().parse::<i64>().unwrap();
-    println!("{}", target_output);
     let operands = equation_parts
         .next()
         .unwrap()
         .split_ascii_whitespace()
         .map(|val| val.parse::<i64>().unwrap())
         .collect::<Vec<_>>();
-    println!("{:?}", &operands);
 
     let num_operands = operands.len() as i64;
-    println!("Number of operands: {}", num_operands);
-    let num_operators = i64::pow(2, (num_operands - 1) as u32);
-    println!("Number of operators: {}", num_operators);
 
-    for i in 0..num_operators {
-        if try_equation_fn(i, target_output, &operands) {
-            println!("Success: {}", target_output);
+    for ops in
+        std::iter::repeat_n(operators.iter(), (num_operands - 1) as usize).multi_cartesian_product()
+    {
+        if try_equation(&ops, target_output, &operands) {
             return Some(target_output);
         }
     }
