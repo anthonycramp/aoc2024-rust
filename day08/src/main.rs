@@ -21,39 +21,104 @@ impl Location {
     }
 }
 
-fn compute_antinodes(antenna_locations: &Vec<&Location>) -> Vec<Location> {
+struct Bounds {
+    rows: i32,
+    cols: i32,
+}
+
+impl Bounds {
+    fn new(rows: i32, cols: i32) -> Self {
+        Bounds { rows, cols }
+    }
+
+    fn in_bounds(&self, location: &Location) -> bool {
+        location.row >= 0
+            && location.row < self.rows
+            && location.col >= 0
+            && location.col < self.cols
+    }
+}
+
+fn compute_antinodes(antenna_locations: &Vec<&Location>, map_bounds: &Bounds) -> Vec<Location> {
     let location_one = antenna_locations[0];
     let location_two = antenna_locations[1];
     let row_delta = location_one.row - location_two.row;
     let col_delta = location_one.col - location_two.col;
 
+    let mut ret = vec![];
+
     let antinode_one = Location::new(
         location_one.row - 2 * row_delta,
         location_one.col - 2 * col_delta,
     );
+    if map_bounds.in_bounds(&antinode_one) {
+        ret.push(antinode_one);
+    }
+
     let antinode_two = Location::new(
         location_two.row + 2 * row_delta,
         location_two.col + 2 * col_delta,
     );
-    vec![antinode_one, antinode_two]
+    if map_bounds.in_bounds(&antinode_two) {
+        ret.push(antinode_two);
+    }
+
+    ret
 }
 
-fn is_location_in_map(location: &Location, number_of_rows: usize, number_of_cols: usize) -> bool {
-    location.row >= 0
-        && location.row < number_of_rows as i32
-        && location.col >= 0
-        && location.col < number_of_cols as i32
+fn compute_antinodes_part_2(
+    antenna_locations: &Vec<&Location>,
+    map_bounds: &Bounds,
+) -> Vec<Location> {
+    let location_one = antenna_locations[0];
+    let location_two = antenna_locations[1];
+    let row_delta = location_one.row - location_two.row;
+    let col_delta = location_one.col - location_two.col;
+
+    let mut ret = vec![];
+    let mut new_antinode_row = location_one.row;
+    let mut new_antinode_col = location_one.col;
+
+    loop {
+        new_antinode_row -= row_delta;
+        new_antinode_col -= col_delta;
+
+        let new_antinode_location = Location::new(new_antinode_row, new_antinode_col);
+        if !map_bounds.in_bounds(&new_antinode_location) {
+            break;
+        }
+
+        ret.push(new_antinode_location);
+    }
+
+    let mut new_antinode_row = location_two.row;
+    let mut new_antinode_col = location_two.col;
+
+    loop {
+        new_antinode_row += row_delta;
+        new_antinode_col += col_delta;
+
+        let new_antinode_location = Location::new(new_antinode_row, new_antinode_col);
+        if !map_bounds.in_bounds(&new_antinode_location) {
+            break;
+        }
+
+        ret.push(new_antinode_location);
+    }
+
+    ret
 }
 
-// replace return type as required by the problem
-fn part1(input: &str) -> i32 {
+fn analyse_map(
+    input: &str,
+    compute_antinodes_fn: fn(&Vec<&Location>, &Bounds) -> Vec<Location>,
+) -> i32 {
     // compile a map of frequencies to all antenna locations at that frequency
     let antenna_map = input
         .lines()
         .map(|line| line.chars().collect::<Vec<_>>())
         .collect::<Vec<_>>();
-    let number_of_rows = antenna_map.len();
-    let number_of_cols = antenna_map[0].len();
+    let map_bounds = Bounds::new(antenna_map.len() as i32, antenna_map[0].len() as i32);
 
     // for each frequency, take antenna locations pairwise and compute antinodes
     let mut antenna_locations_by_frequency: HashMap<char, Vec<Location>> = HashMap::new();
@@ -72,15 +137,13 @@ fn part1(input: &str) -> i32 {
 
     for (frequency, antenna_locations) in antenna_locations_by_frequency {
         for antenna_pair in antenna_locations.iter().permutations(2) {
-            let antinode_locations = compute_antinodes(&antenna_pair);
+            let antinode_locations = compute_antinodes_fn(&antenna_pair, &map_bounds);
             // for antinodes within the map bounds, record their location and associated freq
             for antinode_location in antinode_locations.iter() {
-                if is_location_in_map(antinode_location, number_of_rows, number_of_cols) {
-                    (*antinode_locations_by_frequency
-                        .entry(frequency)
-                        .or_insert(HashSet::new()))
-                    .insert(*antinode_location);
-                }
+                (*antinode_locations_by_frequency
+                    .entry(frequency)
+                    .or_insert(HashSet::new()))
+                .insert(*antinode_location);
             }
         }
     }
@@ -97,8 +160,13 @@ fn part1(input: &str) -> i32 {
 }
 
 // replace return type as required by the problem
+fn part1(input: &str) -> i32 {
+    analyse_map(input, compute_antinodes)
+}
+
+// replace return type as required by the problem
 fn part2(input: &str) -> i32 {
-    0
+    analyse_map(input, compute_antinodes_part_2)
 }
 
 #[cfg(test)]
